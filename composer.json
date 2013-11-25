@@ -3,6 +3,7 @@
     "description": "Query Zend Framework 2",
     "homepage": "https://github.com/isdarka/query",
     "type": "library",
+    "version": "1.0",
     "license": "MIT",
     "keywords": [
         "zf2",
