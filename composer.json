@@ -1,5 +1,5 @@
 {
-    "name": "isdarka/query/",
+    "name": "isdarka/query",
     "description": "Query Zend Framework 2",
     "homepage": "https://github.com/isdarka/query",
     "type": "library",
