@@ -1,0 +1,28 @@
+{
+    "name": "isdarka/query/",
+    "description": "Query Zend Framework 2",
+    "homepage": "https://github.com/isdarka/query",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "zf2",
+        "zend",
+        "module",
+        "query"
+    ],
+    "require": {
+        "php": ">=5.3.3",
+        "zendframework/zendframework": "2.*",
+    },
+    "authors": [
+        {
+            "name": "Israel  Ruiz",
+            "email": "musicogui@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-0": {
+            "Query\\": "src/"
+        }
+    }
+}
