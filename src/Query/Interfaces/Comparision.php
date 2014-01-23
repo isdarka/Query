@@ -29,6 +29,8 @@ interface Comparision
 	const IS_NOT_NULL = 'IS NOT NULL';
 	const RANGE = 'RANGE';
 	const AUTO = 'AUTO';
+	
+	const MD5 = 'MD5(\'%s\')';
 	/**********/
 	const ASC = 'ASC';
 	const DESC = 'DESC';

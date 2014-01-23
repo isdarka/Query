@@ -18,7 +18,6 @@ use Zend\Db\Sql\Sql;
 use Zend\Db\Sql\Expression;
 use Model\Bean\AbstractBean;
 use Model\Collection\AbstractCollection;
-// use Core\Model\Metadata\ModuleMetadata as ModuleMetadata;
 
 class Query extends Select implements Comparision
 {
@@ -33,8 +32,6 @@ class Query extends Select implements Comparision
 	
 	private $predicate = null;
 	
-	/** @var $where Zend\Db\Sql\Where */
-// 	protected $where;
 	
 	/**
 	 * 
@@ -69,8 +66,10 @@ class Query extends Select implements Comparision
 	 * @param unknown $comparision
 	 * @return \Query\Query
 	 */
-	public function whereAdd($field, $value, $comparision = self::EQUAL)
+	public function whereAdd($field, $value, $comparision = self::EQUAL, $mutator = NULL)
 	{
+		if(!is_null($mutator))
+			$value = new Expression(sprintf($mutator, $value));
 		$this->predicate($field, $value,$comparision, Predicate::COMBINED_BY_AND);
 		return $this;
 	}
@@ -82,8 +81,10 @@ class Query extends Select implements Comparision
 	 * @param unknown $comparision
 	 * @return \Query\Query
 	 */
-	public function whereOrAdd($field, $value, $comparision = self::EQUAL)
+	public function whereOrAdd($field, $value, $comparision = self::EQUAL, $mutator = NULL)
 	{
+		if(!is_null($mutator))
+			$value = new Expression(sprintf($mutator, $value));
 		$this->predicate($field, $value,$comparision, Predicate::COMBINED_BY_OR);
 		return $this;
 	}
@@ -108,15 +109,26 @@ class Query extends Select implements Comparision
 			case self::IN:
 				if(!is_array($value))
 					throw new QueryException('$value must be array but is '.gettype($value));
-				$this->predicate->in($this->entityName . "." . $field, $value);
+				if(empty($value))
+					$value = array("Array Empty");
+					$this->predicate->in($field, $value);
 				break;
 			case self::EQUAL:
-				$this->predicate->equalTo($this->entityName . "." . $field, $value);
+				$this->predicate->equalTo($field, $value);
 				break;
 			case self::BETWEEN:
 				if(!is_array($value))
 					throw new QueryException('$value must be array but is '.gettype($value));
 				$this->predicate->between($field, $value[0], $value[1]);
+				break;
+			case self::IS_NOT_NULL:
+				$this->predicate->isNotNull($field);
+				break;
+			case self::IS_NULL:
+				$this->predicate->isNull($field);
+				break;
+			case self::LIKE:
+				$this->predicate->like($field, '%'.$value.'%');
 				break;
 			default:
 				$this->predicate->equalTo($field, $value, $comparision);
@@ -246,7 +258,7 @@ class Query extends Select implements Comparision
 	private function getBeanMetadata(AbstractBean $bean)
 	{
 		$bean = explode('\\', get_class($bean));
-		$metadata = substr($bean[3], 0, -4)."Metadata";
+		$metadata = $bean[3]."Metadata";
 		$bean[2] = "Metadata";
 		$bean[3] = $metadata;
 		$metadata = implode('\\', $bean);
@@ -275,12 +287,16 @@ class Query extends Select implements Comparision
 	}
 	
 	/**
-	 * @return AbstractBean
+	 * @return AbstractBean|null
 	 */
 	public function findOne()
 	{
 		$array = $this->fetchOne();
-		return $this->metadata->getFactory()->createFromArray($array);
+		if($array)
+			return $this->metadata->getFactory()->createFromArray($array);
+		else
+			return null;
+			
 	}
 	
 	/**
@@ -301,5 +317,21 @@ class Query extends Select implements Comparision
 			throw new QueryException($exception);
 		else 
 			return $this->findByPk($primaryKey);
+	}
+	
+	/**
+	 * 
+	 * @param unknown $fields
+	 * @return \Query\Query
+	 */
+	public function filter($fields)
+	{
+		foreach ($this->metadata->getFields() as $field)
+		{
+			if(isset($fields[$field]) && !empty($fields[$field])) 
+				$this->whereAdd($field, $fields[$field], self::LIKE);
+		}
+		
+		return $this;
 	}
 }
