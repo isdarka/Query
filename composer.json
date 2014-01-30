@@ -1,29 +1,23 @@
 {
-    "name": "isdarka/query",
-    "description": "Query Zend Framework 2",
-    "homepage": "https://github.com/isdarka/query",
-    "type": "library",
-    "version": "1.0",
-    "license": "MIT",
-    "keywords": [
-        "zf2",
-        "zend",
-        "module",
-        "query"
-    ],
-    "require": {
-        "php": ">=5.3.3",
-        "zendframework/zendframework": "2.*"
-    },
-    "authors": [
-        {
-            "name": "Israel  Ruiz",
-            "email": "musicogui@gmail.com"
-        }
-    ],
-    "autoload": {
-        "psr-0": {
-            "Query\\": "src/"
-        }
+  "name" : "isdarka/query",
+  "description" : "Query Zend Framework 2",
+  "version" : "1.0",
+  "require" : {
+    "php" : ">=5.3.3",
+    "zendframework/zendframework" : "2.*",
+    "isdarka/model" : "dev-master"
+  },
+  "authors" : [ {
+    "name" : "Israel  Ruiz",
+    "email" : "musicogui@gmail.com"
+  } ],
+  "keywords" : [ "zf2", "zend", "module", "query" ],
+  "autoload" : {
+    "psr-0" : {
+      "Query\\" : "src/"
     }
+  },
+  "license" : "MIT",
+  "type" : "library",
+  "homepage" : "https://github.com/isdarka/query"
 }

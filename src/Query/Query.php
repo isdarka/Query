@@ -18,6 +18,8 @@ use Zend\Db\Sql\Sql;
 use Zend\Db\Sql\Expression;
 use Model\Bean\AbstractBean;
 use Model\Collection\AbstractCollection;
+use Zend\Db\Sql\Predicate\Operator;
+// use Core\Model\Metadata\ModuleMetadata as ModuleMetadata;
 
 class Query extends Select implements Comparision
 {
@@ -129,6 +131,12 @@ class Query extends Select implements Comparision
 				break;
 			case self::LIKE:
 				$this->predicate->like($field, '%'.$value.'%');
+				break;
+			case self::NOT_EQUAL:
+				$this->predicate->notEqualTo($field, $value);
+				break;
+			case self::NOT_IN:
+// 				$this->predicate->($left, $right)EqualTo($field, $value);
 				break;
 			default:
 				$this->predicate->equalTo($field, $value, $comparision);
@@ -287,7 +295,7 @@ class Query extends Select implements Comparision
 	}
 	
 	/**
-	 * @return AbstractBean|null
+	 * @return AbstractBean
 	 */
 	public function findOne()
 	{
