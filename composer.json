@@ -4,8 +4,7 @@
   "version" : "1.0",
   "require" : {
     "php" : ">=5.3.3",
-    "zendframework/zendframework" : "2.*",
-    "isdarka/model" : "dev-master"
+    "zendframework/zendframework" : "2.*"
   },
   "authors" : [ {
     "name" : "Israel  Ruiz",
