@@ -13,8 +13,8 @@
   } ],
   "keywords" : [ "zf2", "zend", "module", "query" ],
   "autoload" : {
-    "psr-0" : {
-      "Query\\" : "Query/"
+    "psr-4" : {
+      "Query\\" : "module/Query/src"
     }
   },
   "license" : "MIT",
