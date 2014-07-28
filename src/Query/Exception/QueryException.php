@@ -6,8 +6,9 @@
  */
 
 namespace Query\Exception;
+use Exception;
 
-class QueryException extends \Exception
+class QueryException extends Exception
 {
 	
 }

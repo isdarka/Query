@@ -18,8 +18,8 @@ use Zend\Db\Sql\Sql;
 use Zend\Db\Sql\Expression;
 use Model\Bean\AbstractBean;
 use Model\Collection\AbstractCollection;
-use Zend\Db\Sql\Predicate\Operator;
-// use Core\Model\Metadata\ModuleMetadata as ModuleMetadata;
+use Zend\Db\Sql\Predicate\NotIn;
+use Zend\Db\Sql\Predicate\Literal;
 
 class Query extends Select implements Comparision
 {
@@ -33,7 +33,6 @@ class Query extends Select implements Comparision
 	private $entityName;
 	
 	private $predicate = null;
-	
 	
 	/**
 	 * 
@@ -72,6 +71,7 @@ class Query extends Select implements Comparision
 	{
 		if(!is_null($mutator))
 			$value = new Expression(sprintf($mutator, $value));
+		
 		$this->predicate($field, $value,$comparision, Predicate::COMBINED_BY_AND);
 		return $this;
 	}
@@ -83,7 +83,7 @@ class Query extends Select implements Comparision
 	 * @param unknown $comparision
 	 * @return \Query\Query
 	 */
-	public function whereOrAdd($field, $value, $comparision = self::EQUAL, $mutator = NULL)
+	public function whereOrAdd($field, $value, $comparision = self::EQUAL, $mutator = NULL, $mutatorField = NULL)
 	{
 		if(!is_null($mutator))
 			$value = new Expression(sprintf($mutator, $value));
@@ -105,46 +105,64 @@ class Query extends Select implements Comparision
 			$this->predicate = new Predicate(null, Predicate::COMBINED_BY_AND);
 		else
 			$this->predicate->__get("or");
-	
-		switch ($comparision)
-		{
-			case self::IN:
-				if(!is_array($value))
-					throw new QueryException('$value must be array but is '.gettype($value));
-				if(empty($value))
-					$value = array("Array Empty");
-					$this->predicate->in($field, $value);
-				break;
-			case self::EQUAL:
-				$this->predicate->equalTo($field, $value);
-				break;
-			case self::BETWEEN:
-				if(!is_array($value))
-					throw new QueryException('$value must be array but is '.gettype($value));
-				$this->predicate->between($field, $value[0], $value[1]);
-				break;
-			case self::IS_NOT_NULL:
-				$this->predicate->isNotNull($field);
-				break;
-			case self::IS_NULL:
-				$this->predicate->isNull($field);
-				break;
-			case self::LIKE:
-				$this->predicate->like($field, '%'.$value.'%');
-				break;
-			case self::NOT_EQUAL:
-				$this->predicate->notEqualTo($field, $value);
-				break;
-			case self::NOT_IN:
-// 				$this->predicate->($left, $right)EqualTo($field, $value);
-				break;
-			default:
-				$this->predicate->equalTo($field, $value, $comparision);
-				break;
+		
+		if($field instanceof \Zend\Db\Sql\Predicate\Expression)
+			$this->where->addPredicate($field);
+		else{
+			switch ($comparision)
+			{
+				case self::IN:
+					if(!is_array($value))
+						throw new QueryException('$value must be array but is '.gettype($value));
+					if(empty($value))
+						$value = array("Array Empty");
+						$this->predicate->in($field, $value);
+					break;
+				case self::EQUAL:
+					$this->predicate->equalTo($field, $value);
+					break;
+				case self::BETWEEN:
+					if(!is_array($value))
+						throw new QueryException('$value must be array but is '.gettype($value));
+					$this->predicate->between($field, $value[0], $value[1]);
+					break;
+				case self::IS_NOT_NULL:
+					$this->predicate->isNotNull($field);
+					break;
+				case self::IS_NULL:
+					$this->predicate->isNull($field);
+					break;
+				case self::LIKE:
+					$this->predicate->like($field, '%'.$value.'%');
+					break;
+				case self::NOT_EQUAL:
+					$this->predicate->notEqualTo($field, $value);
+					break;
+				case self::NOT_IN:
+					$notIn = new NotIn();
+					$notIn->setIdentifier($field);
+					$notIn->setValueSet($value);
+					$this->predicate->addPredicate($notIn, $combination);
+					break;
+				case self::GREATER_OR_EQUAL:
+					$this->predicate->greaterThanOrEqualTo($field, $value);
+					break;
+				case self::GREATER_THAN:
+					$this->predicate->greaterThan($field, $value);
+					break;
+				case self::LESS_OR_EQUAL:
+					$this->predicate->lessThanOrEqualTo($field, $value);
+					break;
+				case self::LESS_THAN:
+					$this->predicate->lessThan($field, $value);
+					break;
+				default:
+					$this->predicate->equalTo($field, $value, $comparision);
+					break;
+			}
+			if($combination == Predicate::COMBINED_BY_AND)
+				$this->where->addPredicate($this->predicate);
 		}
-		if($combination == Predicate::COMBINED_BY_AND)
-			$this->where->addPredicate($this->predicate);
-	
 	}
 	
 	
@@ -157,17 +175,74 @@ class Query extends Select implements Comparision
 	 */
 	public function addColumn($field, $alias = null, $mutator = null)
 	{
-		if(!empty($this->columns))
-			$this->columns = array();
-	
+		/* Clean columns * */
+		foreach ($this->joins as $key => $join)
+		{
+			if(!empty($join['columns']))
+				if(isset($join['columns'][0]))
+					if($join['columns'][0] == "*")
+						$this->joins[$key]['columns'] = array();
+		}
+		$data = null;
+		if($field instanceof Expression == false)
+			if(strpos($field, "."))
+			{
+				$data = explode(".", $field);
+				$entity = $data[0];
+				$field = $data[1];
+			}
+		
+		$this->prefixColumnsWithTable = true;
+		if(array_key_exists(0, $this->columns))
+			if($this->columns[0] == "*")
+				$this->columns = array();
+		
 		if($field instanceof Query)
 		{
 			$this->columns[$alias] = new Expression(sprintf(("(%s)"), $field->toSql()));
+		}elseif (is_array($data)){
+			$joins = array();
+			foreach ($this->joins as $key => $join)
+			{
+				$key = array_keys($join["name"]);
+				$joins[] = reset($key);
+			}
+			
+			foreach ($this->joins as $key => $join)
+			{
+				if(in_array($entity, $joins)){
+					if(array_key_exists($entity, $join['name'])){
+						
+						if(is_null($mutator) && !is_null($alias))
+							$this->joins[$key]['columns'][$alias] = $field;
+						elseif (is_null($alias))
+							$this->joins[$key]['columns'][] = $field;
+						else
+							if($entity)
+								$this->joins[$key]['columns'][$alias] = new Expression(sprintf($mutator, $entity.".".$field));
+							else
+								$this->joins[$key]['columns'][$alias] = new Expression(sprintf($mutator, $field));
+							
+					}
+				}else{
+					if(is_null($mutator) && !is_null($alias))
+						$this->columns[$alias] = $field;
+					elseif (is_null($alias))
+						$this->columns[$field] = $field;
+					else{
+						if($entity)
+							$this->columns[$alias] = new Expression(sprintf($mutator, $entity.".".$field));
+						else
+							$this->columns[$alias] = new Expression(sprintf($mutator, $field));
+					}
+				}
+				
+			}
 		}else{
 			if(is_null($mutator) && !is_null($alias))
 				$this->columns[$alias] = $field;
 			elseif (is_null($alias))
-			$this->columns[$field] = $field;
+				$this->columns[$field] = $field;
 			else
 				$this->columns[$alias] = new Expression(sprintf($mutator, $field));
 		}
@@ -287,10 +362,10 @@ class Query extends Select implements Comparision
 	public function find()
 	{
 		$array = $this->fecthAll();
+		
 		$collection = $this->metadata->newCollection();
 		foreach ($array as $item)
 			$collection->append($this->metadata->getFactory()->createFromArray($item));
-	
 		return $collection;
 	}
 	
@@ -313,7 +388,7 @@ class Query extends Select implements Comparision
 	 */
 	public function findByPk($primaryKey)
 	{
-		if(is_null($primaryKey) || empty($primaryKey))
+		if(is_null($primaryKey) || empty($primaryKey) || !$primaryKey)
 			throw new QueryException("Primary key not defined");
 		$this->whereAdd($this->metadata->getPrimaryKey(), (int) $primaryKey, Comparision::EQUAL);
 		return $this->find()->getOne();
